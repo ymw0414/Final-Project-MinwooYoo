@@ -1,8 +1,8 @@
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch
 
-# Load your uploaded model from HuggingFace
-model_id = "ymw04/streamlit-demo"
+# Correct HuggingFace model ID
+model_id = "ymw0414/roberta_1980s_paragraph_filtered_epoch3"
 
 # Load tokenizer and model
 tokenizer = AutoTokenizer.from_pretrained(model_id)
@@ -23,5 +23,5 @@ def predict(text):
         outputs = model(**inputs)
         probs = outputs.logits.softmax(dim=-1)
 
-    # Return probability list
+    # Probability list
     return probs[0].tolist()
