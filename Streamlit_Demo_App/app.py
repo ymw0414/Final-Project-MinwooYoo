@@ -4,7 +4,7 @@ from inference import predict
 # Page setup
 st.set_page_config(page_title="Slant Classifier", page_icon="📰")
 
-st.title("Newspaper Slant Classifier")
+st.title("Political Partisanship Classifier (Democrat vs Republican)")
 
 # Description about the model training data
 st.markdown("This model was trained exclusively on U.S. Congressional Record text from the 1980s.")
@@ -31,3 +31,4 @@ if st.button("Classify"):
 
         # Display raw outputs
         st.write("Raw scores:", scores)
+
