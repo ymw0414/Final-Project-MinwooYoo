@@ -6,6 +6,9 @@ st.set_page_config(page_title="Slant Classifier", page_icon="📰")
 
 st.title("Newspaper Slant Classifier")
 
+# Description about the model training data
+st.markdown("This model was trained exclusively on U.S. Congressional Record text from the 1980s.")
+
 # Input field
 text = st.text_area("Enter text")
 
