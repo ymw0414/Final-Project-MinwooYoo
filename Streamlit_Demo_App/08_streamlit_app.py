@@ -14,7 +14,8 @@ st.set_page_config(
 # -----------------------------
 # LOAD MODEL
 # -----------------------------
-MODEL_PATH = "models/roberta_1980s_paragraph_filtered_epoch3"
+# IMPORTANT: use HuggingFace Hub path, NOT a local folder
+MODEL_PATH = "minwooyoo/roberta_1980s_paragraph_filtered_epoch3"
 
 @st.cache_resource
 def load_model():
@@ -60,13 +61,32 @@ if st.button("Run Classification"):
         party = "Democrat (D)" if pred == 0 else "Republican (R)"
         score = float(probs[pred])
 
-        color = "blue" if pred == 0 else "red"
+        color = "#1d67ff" if pred == 0 else "#cc0000"
 
         # -----------------------------
-        # CLEAN RESULT OUTPUT
+        # CLEAN RESULT CARD
         # -----------------------------
-        st.subheader("Prediction Result")
-        st.markdown(f"### **<span style='color:{color};'>{party}</span>**", unsafe_allow_html=True)
-        st.write(f"Confidence Score: **{score:.4f}**")
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#f8f9fa;
+                padding:20px;
+                border-radius:10px;
+                border-left:8px solid {color};
+                margin-top:20px;">
+                <h3 style="margin-bottom:10px;">
+                    Prediction: <span style="color:{color};">{party}</span>
+                </h3>
+                <p style="font-size:16px; margin-bottom:6px;">
+                    Confidence Score: <b>{score:.4f}</b>
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         st.progress(score)
+
+        st.caption(
+            f"The model predicts that this speech resembles typical **{party}** rhetorical patterns."
+        )
