@@ -8,9 +8,13 @@ st.title("Political Partisanship Classifier (Democrat vs Republican)")
 
 # Description about the model training data
 st.markdown(
-    "This app uses a RoBERTa-base model fine-tuned on U.S. Congressional Record text from the 1980s. "
-    "The model classifies input text as closer to Democratic or Republican language patterns."
+    """
+    **Model information**
+    - This app uses a RoBERTa-base model fine-tuned on U.S. Congressional Record text from the 1980s.  
+    - It classifies input text based on similarity to Democratic or Republican language patterns.
+    """
 )
+
 
 # Input field
 text = st.text_area("Enter text")
@@ -34,5 +38,6 @@ if st.button("Classify"):
 
         # Display raw outputs
         st.write("Raw scores:", scores)
+
 
 
