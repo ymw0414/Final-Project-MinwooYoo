@@ -7,7 +7,10 @@ st.set_page_config(page_title="Slant Classifier", page_icon="📰")
 st.title("Political Partisanship Classifier (Democrat vs Republican)")
 
 # Description about the model training data
-st.markdown("This model was trained exclusively on U.S. Congressional Record text from the 1980s.")
+st.markdown(
+    "This app uses a RoBERTa-base model fine-tuned on U.S. Congressional Record text from the 1980s. "
+    "The model classifies input text as closer to Democratic or Republican language patterns."
+)
 
 # Input field
 text = st.text_area("Enter text")
@@ -31,4 +34,5 @@ if st.button("Classify"):
 
         # Display raw outputs
         st.write("Raw scores:", scores)
+
 
