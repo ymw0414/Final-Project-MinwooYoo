@@ -1,145 +1,152 @@
 # Political Text Classification (DATS 6312: Natural Language Processing)
 
-🔗 Live Demo: https://final-project-minwooyoo-bcbbuifbzcrqmmalx8z3gn.streamlit.app/
+🔗 Live Demo  
+https://final-project-minwooyoo-bcbbuifbzcrqmmalx8z3gn.streamlit.app/
 
-Final-Project-Minwoo Yoo
+---
 
-Final project repository for DATS 6312: Natural Language Processing.
+Overview
 
-This project builds an end-to-end NLP pipeline that classifies the partisan leaning
-(Democrat vs Republican) of political text, using U.S. Congressional speeches as training data.
+End-to-end NLP pipeline for partisan classification of political text
+(Democrat vs Republican) using U.S. Congressional speeches.
 
-The pipeline covers data construction, preprocessing, baseline modeling, transformer fine-tuning,
-and an interactive Streamlit demo.
+The project covers data construction, text preprocessing, baseline modeling,
+transformer fine-tuning, and an interactive Streamlit demo for real-time inference.
+
+---
 
 Project Overview
 
-Task: Binary political text classification (D vs R)
+Task  
+Binary political text classification (D vs R)
 
-Data: U.S. Congressional speeches
+Data  
+U.S. Congressional speeches
 
-Models:
+Models  
+- TF-IDF + Logistic Regression (baseline)  
+- RoBERTa-base (fine-tuned)
 
-TF-IDF + Logistic Regression (baseline)
+Outputs  
+- Trained classifiers  
+- Streamlit app for real-time inference
 
-RoBERTa-base (fine-tuned)
-
-Output:
-
-Trained classifiers
-
-Streamlit app for real-time inference
+---
 
 Repository Structure
 
-All core code is located in the Code/ directory.
+All core code is located in the Code directory.
 Scripts are numbered to reflect execution order.
 
 Code/
-├── 01_load_speeches.py
-├── 02_merge_speaker_map.py
-├── 03_add_party_label.py
-├── 04_preprocess_text.py
-├── 05_train_baseline.py
-├── 06_tokenize_and_concat.py
-├── 07_train_roberta.py
-└── 08_streamlit_app.py
+- 01_load_speeches.py
+- 02_merge_speaker_map.py
+- 03_add_party_label.py
+- 04_preprocess_text.py
+- 05_train_baseline.py
+- 06_tokenize_and_concat.py
+- 07_train_roberta.py
+- 08_streamlit_app.py
+
+---
 
 Pipeline Description
+
 1. Data Construction
 
-01_load_speeches.py
+01_load_speeches.py  
 Load raw Congressional speech text and construct the base dataset.
 
-02_merge_speaker_map.py
-Merge speaker metadata to associate speeches with individual legislators.
+02_merge_speaker_map.py  
+Merge speaker metadata to associate speeches with legislators.
 
-03_add_party_label.py
-Attach binary party labels (Democrat vs Republican) to each speech.
+03_add_party_label.py  
+Attach binary party labels (Democrat vs Republican).
 
 2. Text Preprocessing
 
-04_preprocess_text.py
-Clean raw text and apply quality filters to produce the final modeling dataset.
+04_preprocess_text.py  
+Clean raw text and apply quality filters to produce the modeling dataset.
 
 3. Baseline Model
 
-05_train_baseline.py
+05_train_baseline.py  
 Train a TF-IDF + Logistic Regression classifier as a transparent baseline.
 
 4. Transformer Tokenization
 
-06_tokenize_and_concat.py
+06_tokenize_and_concat.py  
 Tokenize text using the RoBERTa tokenizer and create train/validation/test splits.
 
 5. RoBERTa Fine-Tuning
 
-07_train_roberta.py
+07_train_roberta.py  
 Fine-tune roberta-base for partisan text classification.
 
 6. Interactive Demo
 
-08_streamlit_app.py
+08_streamlit_app.py  
 Streamlit application that takes arbitrary text input and outputs predicted political leaning.
+
+---
 
 Requirements
 
 Python 3.9+ is recommended.
 
-Key libraries:
+Key libraries  
+- pandas  
+- numpy  
+- scikit-learn  
+- torch  
+- transformers  
+- datasets  
+- streamlit  
+- tqdm  
+- matplotlib  
 
-pandas
-
-numpy
-
-scikit-learn
-
-torch
-
-transformers
-
-datasets
-
-streamlit
-
-tqdm
-
-Dependencies can be installed via:
-
+Install dependencies with:
 pip install -r requirements.txt
+
+---
 
 Data
 
-Due to size constraints, raw data is not included in this repository.
+Due to size constraints, raw data is not included.
 
-The project assumes access to publicly available U.S. Congressional speech data
+The pipeline assumes access to publicly available U.S. Congressional speech data
 and speaker metadata (e.g., Congressional Record–style text and SpeakerMap-style files).
 
-Users must place raw data files in the expected data directory before running the pipeline.
+Raw data files should be placed under:
+data/raw/
+
+---
 
 Reproducibility and Usage
 
-Scripts are intended to be run sequentially:
+Scripts should be run sequentially:
 
-01_load_speeches.py
-02_merge_speaker_map.py
-03_add_party_label.py
-04_preprocess_text.py
-05_train_baseline.py
-06_tokenize_and_concat.py
-07_train_roberta.py
-
+python Code/01_load_speeches.py  
+python Code/02_merge_speaker_map.py  
+python Code/03_add_party_label.py  
+python Code/04_preprocess_text.py  
+python Code/05_train_baseline.py  
+python Code/06_tokenize_and_concat.py  
+python Code/07_train_roberta.py  
 
 To launch the demo:
 
 streamlit run Code/08_streamlit_app.py
 
-
 Transformer fine-tuning assumes GPU availability.
+
+---
 
 Notes
 
-This repository contains the final cleaned pipeline used for the course project.
+This repository contains the final cleaned pipeline used for the project.
 
-Alternative preprocessing choices and experimental variants were explored during development
-but were removed for clarity and reproducibility.
+Alternative preprocessing choices and experimental variants were explored
+during development but were removed for clarity and reproducibility.
+
+This project was developed as part of DATS 6312: Natural Language Processing.
