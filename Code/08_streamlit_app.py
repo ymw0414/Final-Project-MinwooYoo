@@ -1,6 +1,7 @@
 import streamlit as st
-from transformers import RobertaTokenizerFast, RobertaForSequenceClassification
+from pathlib import Path
 import torch
+from transformers import RobertaTokenizerFast, RobertaForSequenceClassification
 
 # -----------------------------
 # PAGE CONFIG
@@ -12,14 +13,31 @@ st.set_page_config(
 )
 
 # -----------------------------
+# MODEL PATH (relative, reproducible)
+# -----------------------------
+MODEL_DIR = Path("models/roberta_1980s_paragraph")
+
+# -----------------------------
+# DEVICE
+# -----------------------------
+@st.cache_resource
+def get_device():
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+device = get_device()
+
+# -----------------------------
 # LOAD MODEL
 # -----------------------------
-MODEL_PATH = "models/roberta_1980s_paragraph_filtered_epoch3"
-
 @st.cache_resource
 def load_model():
-    tokenizer = RobertaTokenizerFast.from_pretrained(MODEL_PATH)
-    model = RobertaForSequenceClassification.from_pretrained(MODEL_PATH)
+    tokenizer = RobertaTokenizerFast.from_pretrained(MODEL_DIR)
+    model = RobertaForSequenceClassification.from_pretrained(MODEL_DIR)
+    model.to(device)
     model.eval()
     return tokenizer, model
 
@@ -29,7 +47,10 @@ tokenizer, model = load_model()
 # HEADER
 # -----------------------------
 st.title("🏛️ Political Speech Classifier Demo")
-st.info("Model was trained exclusively on speeches from **1981–1989 (97th–100th Congress)**.")
+st.info(
+    "Model trained on U.S. Congressional speeches from **1981–1989 "
+    "(97th–100th Congress)**."
+)
 
 speech = st.text_area(
     "Enter speech text:",
@@ -52,6 +73,8 @@ if st.button("Run Classification"):
             return_tensors="pt"
         )
 
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+
         with torch.no_grad():
             logits = model(**inputs).logits
             probs = torch.softmax(logits, dim=1)[0]
@@ -63,10 +86,12 @@ if st.button("Run Classification"):
         color = "blue" if pred == 0 else "red"
 
         # -----------------------------
-        # CLEAN RESULT OUTPUT
+        # RESULT OUTPUT
         # -----------------------------
         st.subheader("Prediction Result")
-        st.markdown(f"### **<span style='color:{color};'>{party}</span>**", unsafe_allow_html=True)
+        st.markdown(
+            f"### <span style='color:{color};'>{party}</span>",
+            unsafe_allow_html=True
+        )
         st.write(f"Confidence Score: **{score:.4f}**")
-
         st.progress(score)
