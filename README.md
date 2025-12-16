@@ -1,3 +1,7 @@
+# Political Text Classification (DATS 6312: Natural Language Processing)
+
+🔗 Live Demo: https://final-project-minwooyoo-bcbbuifbzcrqmmalx8z3gn.streamlit.app/
+
 Final-Project-Minwoo Yoo
 
 Final project repository for DATS 6312: Natural Language Processing.
