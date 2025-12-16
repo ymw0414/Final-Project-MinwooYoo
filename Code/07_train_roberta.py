@@ -1,3 +1,14 @@
+"""
+07_train_roberta.py
+
+Fine-tunes RoBERTa on:
+    - 1980s speeches (97th–100th Congress)
+    - Paragraph-filtered: >=2 sentences AND >=200 chars
+    - Tokenized dataset: tokenized_1980s_paragraph_filtered_streaming/
+    - EPOCHS = 3
+"""
+
+import platform
 from pathlib import Path
 import numpy as np
 import torch
@@ -12,22 +23,33 @@ from transformers import (
 from sklearn.metrics import accuracy_score, f1_score
 
 
-# =========================================================
-# Paths (LOCAL)
-# =========================================================
-BASE = Path("C:/Users/ymw04/Dropbox/shifting_slant")
+# =========================
+# Auto-detect OS (Mac vs Windows)
+# =========================
+system = platform.system()
+if system == "Darwin":  # macOS
+    BASE = Path("/Users/ymw0414/Library/CloudStorage/Dropbox/shifting_slant")
+else:  # Windows
+    BASE = Path("C:/Users/ymw04/Dropbox/shifting_slant")
 
+print(f"Running on: {system}")
+print(f"Base path: {BASE}")
+
+
+# =========================
+# Paths
+# =========================
 CHUNK_DIR = BASE / "data/processed/tokenized_1980s_paragraph_filtered_streaming"
-MODEL_SAVE_DIR = BASE / "models/roberta_1980s_paragraph_filtered_epoch1"
+MODEL_SAVE_DIR = BASE / "models/roberta_1980s_paragraph_filtered_epoch3"
 EVAL_DIR = BASE / "evaluation"
 
 MODEL_SAVE_DIR.mkdir(parents=True, exist_ok=True)
 EVAL_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# =========================================================
-# Load datasets
-# =========================================================
+# =========================
+# Load tokenized chunks
+# =========================
 print("Collecting chunk directories...")
 chunk_dirs = sorted(
     [p for p in CHUNK_DIR.iterdir() if p.is_dir() and p.name.startswith("chunk_")],
@@ -35,10 +57,9 @@ chunk_dirs = sorted(
 )
 
 if not chunk_dirs:
-    raise RuntimeError(f"No chunk_* directories found in {CHUNK_DIR}")
+    raise RuntimeError("No tokenized paragraph-filtered chunks found.")
 
 print(f"Found {len(chunk_dirs)} chunks.")
-print("Loading chunks and concatenating...")
 
 datasets = [load_from_disk(str(p)) for p in chunk_dirs]
 dataset = concatenate_datasets(datasets)
@@ -47,9 +68,9 @@ print("Dataset loaded:")
 print(dataset)
 
 
-# =========================================================
-# Train/Valid/Test Split
-# =========================================================
+# =========================
+# Train/Valid/Test split
+# =========================
 dataset = dataset.shuffle(seed=42)
 
 train_test = dataset.train_test_split(test_size=0.2, seed=42)
@@ -60,7 +81,6 @@ valid_ds = test_valid["train"]
 test_ds = test_valid["test"]
 
 cols = ["input_ids", "attention_mask", "labels"]
-
 train_ds.set_format(type="torch", columns=cols)
 valid_ds.set_format(type="torch", columns=cols)
 test_ds.set_format(type="torch", columns=cols)
@@ -70,19 +90,19 @@ print("Valid size:", len(valid_ds))
 print("Test size:", len(test_ds))
 
 
-# =========================================================
-# DataLoaders (optimized for RTX 3080 Ti)
-# =========================================================
-BATCH_SIZE = 32
+# =========================
+# DataLoaders
+# =========================
+BATCH_SIZE = 32  # stable for 3080 Ti + also safe on M4 Pro
 
 train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
 valid_loader = DataLoader(valid_ds, batch_size=BATCH_SIZE, shuffle=False)
 test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=False)
 
 
-# =========================================================
-# Model / optimizer / scheduler
-# =========================================================
+# =========================
+# Model
+# =========================
 print("Loading tokenizer and model...")
 tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
 
@@ -91,16 +111,24 @@ model = RobertaForSequenceClassification.from_pretrained(
     num_labels=2,
 )
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Using device:", device)
-if device.type == "cuda":
-    print("GPU:", torch.cuda.get_device_name(0))
+# device selection (cuda -> mps -> cpu)
+if torch.cuda.is_available():
+    device = torch.device("cuda")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+else:
+    device = torch.device("cpu")
 
+print("Using device:", device)
 model.to(device)
 
+
+# =========================
+# Optimizer + Scheduler
+# =========================
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5, weight_decay=0.01)
 
-NUM_EPOCHS = 1   # <<< ONLY CHANGE (epoch1)
+NUM_EPOCHS = 3  # <<< ONLY CHANGE
 total_steps = len(train_loader) * NUM_EPOCHS
 warmup_steps = int(0.06 * total_steps)
 
@@ -110,12 +138,12 @@ scheduler = get_linear_schedule_with_warmup(
     num_training_steps=total_steps,
 )
 
-scaler = torch.cuda.amp.GradScaler()  # fp16
+scaler = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
 
 
-# =========================================================
+# =========================
 # Evaluation function
-# =========================================================
+# =========================
 def evaluate(model, dataloader):
     model.eval()
     all_labels = []
@@ -126,7 +154,10 @@ def evaluate(model, dataloader):
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
 
-            with torch.cuda.amp.autocast():
+            if device.type == "cuda":
+                with torch.cuda.amp.autocast():
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            else:
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
 
             preds = torch.argmax(outputs.logits, dim=-1)
@@ -139,9 +170,9 @@ def evaluate(model, dataloader):
     return acc, f1_r
 
 
-# =========================================================
-# Training Loop (with progress + ETA)
-# =========================================================
+# =========================
+# Training Loop
+# =========================
 print("Starting training...")
 
 for epoch in range(NUM_EPOCHS):
@@ -156,7 +187,15 @@ for epoch in range(NUM_EPOCHS):
         attention_mask = batch["attention_mask"].to(device)
         labels = batch["labels"].to(device)
 
-        with torch.cuda.amp.autocast():
+        if device.type == "cuda":
+            with torch.cuda.amp.autocast():
+                outputs = model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    labels=labels,
+                )
+                loss = outputs.loss
+        else:
             outputs = model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
@@ -164,16 +203,21 @@ for epoch in range(NUM_EPOCHS):
             )
             loss = outputs.loss
 
-        scaler.scale(loss).backward()
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+        if device.type == "cuda":
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
 
-        scaler.step(optimizer)
-        scaler.update()
         scheduler.step()
-
         total_loss += loss.item()
 
+        # ETA print
         if (step + 1) % 200 == 0:
             percent = (step + 1) / len(train_loader) * 100
             elapsed = time.time() - start_time
@@ -186,28 +230,25 @@ for epoch in range(NUM_EPOCHS):
                 f"| ETA {eta/60:.2f} min"
             )
 
-    print(f"Epoch {epoch+1} finished. Avg loss = {total_loss/len(train_loader):.4f}")
-
+    # Validation
     val_acc, val_f1 = evaluate(model, valid_loader)
     print(f"Validation acc: {val_acc:.4f}, F1 (R): {val_f1:.4f}")
 
 
-# =========================================================
-# Final Test
-# =========================================================
-print("Testing model...")
+# =========================
+# Final test
+# =========================
 test_acc, test_f1 = evaluate(model, test_loader)
 print(f"Test accuracy: {test_acc:.4f} | Test F1 (R): {test_f1:.4f}")
 
 
-# =========================================================
-# Save Model + Metrics
-# =========================================================
+# =========================
+# Save model + metrics
+# =========================
 model.save_pretrained(str(MODEL_SAVE_DIR))
 tokenizer.save_pretrained(str(MODEL_SAVE_DIR))
 
-metrics_path = EVAL_DIR / "roberta_1980s_paragraph_filtered_epoch1_metrics.txt"
-with open(metrics_path, "w") as f:
+with open(EVAL_DIR / "roberta_1980s_paragraph_filtered_epoch3_metrics.txt", "w") as f:
     f.write(f"Test accuracy: {test_acc:.6f}\n")
     f.write(f"Test F1 (R): {test_f1:.6f}\n")
 
